@@ -159,4 +159,4 @@ class EKF:
         self.state_estimate_k_minus_1 = optimal_state_estimate_k
         self.P_k_minus_1 = covariance_estimate_k
 
-        return optimal_state_estimate_k
+        return optimal_state_estimate_k[0], optimal_state_estimate_k[1], optimal_state_estimate_k[2]
