@@ -1,4 +1,6 @@
 import numpy as np
+np.set_printoptions(precision=3,suppress=True)
+
 class EKF:    
     def __init__(self, dt, initial_pos, initial_speed):
 
@@ -156,3 +158,5 @@ class EKF:
         # Get ready for the next timestep by updating the variable values
         self.state_estimate_k_minus_1 = optimal_state_estimate_k
         self.P_k_minus_1 = covariance_estimate_k
+
+        return optimal_state_estimate_k
