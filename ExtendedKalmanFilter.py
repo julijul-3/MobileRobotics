@@ -37,7 +37,12 @@ class EKF:
         self.R_k = np.array([[1.0,   0,    0],                          # bruit a calibrer (camera)
                         [  0, 1.0,    0],
                         [  0,    0, 1.0]])
-                        
+        
+        # same matrix as just above, but for when the camera gives no input ( i.e. input 0,0,0) to trust more the model than the cam
+        self.R_no_cam = np.array([[5.0, 0, 0],                          # bruit a calibrer (camera)
+                                  [0, 5.0, 0],
+                                  [0, 0, 5.0]])
+                                
         # Sensor noise. 
         self.sensor_noise_w_k = np.array([0.07,0.07,0.04])              # bruit a calibrer (camera)
                 # # We start at time k=1
@@ -91,10 +96,10 @@ class EKF:
         INPUT
             :param z_k_observation_vector The observation from the Odometry
                 3x1 NumPy Array [x,y,yaw] in the global reference frame
-                in [meters,meters,radians].
+                in [meters,meters,degrees].
             :param control_vector_k_minus_1 The control vector applied at time k-1
                 3x1 NumPy Array [v,v,yaw rate] in the global reference frame
-                in [meters per second,meters per second,radians per second].
+                in [meters per second,meters per second,degrees per second].
                 
         OUTPUT
             :return state_estimate_k near-optimal state estimate at time k  
@@ -128,7 +133,11 @@ class EKF:
         print(f'Observation={z_k_observation_vector}')
                 
         # Calculate the measurement residual covariance
-        S_k = self.H_k @ P_k @ self.H_k.T + self.R_k
+        # see if camera gives good result to see which R matrix to use
+        if(np.array_equal(z_k_observation_vector, np.zeros(3))):
+            S_k = self.H_k @ P_k @ self.H_k.T + self.R_no_cam
+        else:
+            S_k = self.H_k @ P_k @ self.H_k.T + self.R_k
             
         # Calculate the near-optimal Kalman gain
         # We use pseudoinverse since some of the matrices might be
