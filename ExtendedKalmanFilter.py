@@ -2,8 +2,13 @@ import numpy as np
 np.set_printoptions(precision=3,suppress=True)
 
 class EKF:    
-    def __init__(self, dt, initial_pos, initial_speed):
-
+    def __init__(self, dt, initial_pos, initial_speed=np.array([0,0])):
+        """Initialises the EFK for our robot model
+        Args: 
+            dt: float - time interval every time we compute a new measure
+            initial_pos: np.array - initial position, with [pos_x, pos_y, orientation]
+            initial_speed: np.array - initial speed, with [linear_speed, angular_speed]. Default to [0,0]
+            """
         # A matrix
         # 3x3 matrix -> number of states x number of states matrix
         # Expresses how the state of the system [x,y,yaw] changes 
@@ -54,12 +59,12 @@ class EKF:
         # The estimated state vector at time k-1 in the global reference frame.
         # starts with initial pos
         # [x_k_minus_1, y_k_minus_1, yaw_k_minus_1]
-        # [meters, meters, degrees]
+        # [pixels, pixels, degrees]
         self.state_estimate_k_minus_1 = initial_pos
      
         # The control input vector at time k-1 in the global reference frame.
         # [v, yaw_rate]
-        # [meters/second, deg/second]
+        # [pixels/second, deg/second]
         self.control_vector_k_minus_1 = initial_speed
      
         # State covariance matrix P_k_minus_1
@@ -96,14 +101,14 @@ class EKF:
         INPUT
             :param z_k_observation_vector The observation from the Odometry
                 3x1 NumPy Array [x,y,yaw] in the global reference frame
-                in [meters,meters,degrees].
+                in [pixels,pixels,degrees].
             :param control_vector_k_minus_1 The control vector applied at time k-1
                 3x1 NumPy Array [v,v,yaw rate] in the global reference frame
-                in [meters per second,meters per second,degrees per second].
+                in [pixels per second,pixels per second,degrees per second].
                 
         OUTPUT
             :return state_estimate_k near-optimal state estimate at time k  
-                3x1 NumPy Array ---> [meters,meters,radians]
+                3x1 NumPy Array ---> [pixels,pixels,degrees]
             :return P_k state covariance_estimate for time k
                 3x3 NumPy Array                 
         """
@@ -145,7 +150,7 @@ class EKF:
         K_k = P_k @ self.H_k.T @ np.linalg.pinv(S_k)
             
         # Calculate an updated state estimate for time k
-        state_estimate_k = state_estimate_k + (K_k @ measurement_residual_y_k)
+        state_estimate_k =  np.round(state_estimate_k + (K_k @ measurement_residual_y_k)).astype(int)
         
         # Update the state covariance estimate for time k
         P_k = P_k - (K_k @ self.H_k @ P_k)
@@ -156,8 +161,16 @@ class EKF:
         # Return the updated state and covariance estimates
         return state_estimate_k, P_k
 
-    def filter(self, camera_pos, speed):                         
-         
+    def filter(self, camera_pos, speed, dt):
+        """
+        Runs one step of the EKF. The only method to use in this class. 
+        Args:
+            camera_pos: np.array - position given by the camera. [pos_x, pos_y, orientation] in pixels, pixels, degrees
+            speed: np.array - speed of the robot when filter is called. [linear_speed, angular speed]
+                                pixels/sec and degrees/sec (+:trigonometric/-:clockwise)
+            dt: time interval since last time filter was called
+        """                    
+        self.dk = dt
         # Run the Extended Kalman Filter and store the 
         # near-optimal state and covariance estimates
         optimal_state_estimate_k, covariance_estimate_k = self.ekf(
@@ -169,3 +182,6 @@ class EKF:
         self.P_k_minus_1 = covariance_estimate_k
 
         return optimal_state_estimate_k[0], optimal_state_estimate_k[1], optimal_state_estimate_k[2]
+
+    def get_pos(self):
+        return self.state_estimate_k_minus_1[0], self.state_estimate_k_minus_1[1], self.state_estimate_k_minus_1[2]
